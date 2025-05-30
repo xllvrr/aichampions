@@ -1,0 +1,88 @@
+{
+  "university": {
+    "name": "National University of Singapore",
+    "departments": [
+      {
+        "name": "Computer Science",
+        "courses": [
+          {
+            "code": "CS101",
+            "name": "Introduction to Programming",
+            "lecturer": {
+              "name": "Dr. Tan Ah Teck",
+              "email": "ahteck@nus.edu.sg"
+            },
+            "schedule": {
+              "lectures": "Monday 2-4pm",
+              "tutorials": "Wednesday 3-4pm"
+            },
+            "students_enrolled": 120
+          },
+          {
+            "code": "CS203",
+            "name": "Data Structures and Algorithms",
+            "lecturer": {
+              "name": "Dr. Lim Hock Chuan",
+              "email": "hclim@nus.edu.sg"
+            },
+            "schedule": {
+              "lectures": "Tuesday 10am-12pm",
+              "tutorials": "Thursday 1-2pm"
+            },
+            "students_enrolled": 95
+          }
+        ],
+        "head": {
+          "name": "Prof. Lee Wei Ling",
+          "email": "weiling@nus.edu.sg"
+        }
+      },
+      {
+        "name": "Electrical Engineering",
+        "courses": [
+          {
+            "code": "EE101",
+            "name": "Circuit Analysis",
+            "lecturer": {
+              "name": "Dr. Kumar Pradeep",
+              "email": "pradeepk@nus.edu.sg"
+            },
+            "schedule": {
+              "lectures": "Friday 9-11am",
+              "tutorials": "Tuesday 4-5pm"
+            },
+            "students_enrolled": 80
+          },
+          {
+            "code": "EE204",
+            "name": "Signals and Systems",
+            "lecturer": {
+              "name": "Dr. Ong Chin Choo",
+              "email": "ongcc@nus.edu.sg"
+            },
+            "schedule": {
+              "lectures": "Wednesday 11am-1pm",
+              "tutorials": "Friday 2-3pm"
+            },
+            "students_enrolled": 70
+          }
+        ],
+        "head": {
+          "name": "Prof. Tan Eng Chong",
+          "email": "engchong@nus.edu.sg"
+        }
+      }
+    ],
+    "location": {
+      "address": "21 Lower Kent Ridge Rd, Singapore 119077",
+      "geo": {
+        "lat": 1.2966,
+        "long": 103.7764
+      }
+    },
+    "contact": {
+      "phone": "+65 6516 6666",
+      "fax": "+65 6775 5826"
+    }
+  }
+}

@@ -1,0 +1,102 @@
+{
+  "HDB_Resale_Market": {
+    "Year": 2024,
+    "Quarter": "Q1",
+    "Statistics": {
+      "Total_Transactions": 10234,
+      "Median_Resale_Price": 450000
+    },
+    "Top_Selling_Towns": [
+      {
+        "Town": "Punggol",
+        "Units_Sold": 342,
+        "Median_Price": 480000
+      },
+      {
+        "Town": "Tampines",
+        "Units_Sold": 289,
+        "Median_Price": 460000
+      },
+      {
+        "Town": "Woodlands",
+        "Units_Sold": 256,
+        "Median_Price": 320000
+      }
+    ],
+    "Resale_Price_Index": {
+      "Current_Index": 192.3,
+      "Change_Percentage": 1.5
+    },
+    "Sample_Transactions": [
+      {
+        "Transaction_ID": "TXN2024Q1001",
+        "Town": "Punggol",
+        "Flat_Type": "4-Room",
+        "Block": "123A",
+        "Street": "Punggol Drive",
+        "Floor_Area_sqm": 95,
+        "Floor_Number": "10-12",
+        "Lease_Commence_Date": 2015,
+        "Resale_Price": 488000
+      },
+      {
+        "Transaction_ID": "TXN2024Q1002",
+        "Town": "Tampines",
+        "Flat_Type": "5-Room",
+        "Block": "456B",
+        "Street": "Tampines Street 44",
+        "Floor_Area_sqm": 110,
+        "Floor_Number": "04-06",
+        "Lease_Commence_Date": 1997,
+        "Resale_Price": 550000
+      },
+      {
+        "Transaction_ID": "TXN2024Q1003",
+        "Town": "Woodlands",
+        "Flat_Type": "3-Room",
+        "Block": "789C",
+        "Street": "Woodlands Avenue 6",
+        "Floor_Area_sqm": 70,
+        "Floor_Number": "01-03",
+        "Lease_Commence_Date": 2000,
+        "Resale_Price": 305000
+      }
+    ],
+    "Market_Trends": {
+      "Price_Fluctuation": {
+        "3-Room": {
+          "Average_Price_Last_Quarter": 300000,
+          "Average_Price_Current_Quarter": 310000,
+          "Percentage_Change": 3.3
+        },
+        "4-Room": {
+          "Average_Price_Last_Quarter": 450000,
+          "Average_Price_Current_Quarter": 460000,
+          "Percentage_Change": 2.2
+        },
+        "5-Room": {
+          "Average_Price_Last_Quarter": 520000,
+          "Average_Price_Current_Quarter": 530000,
+          "Percentage_Change": 1.9
+        }
+      },
+      "Volume_Change": {
+        "3-Room": {
+          "Transactions_Last_Quarter": 1200,
+          "Transactions_Current_Quarter": 1300,
+          "Percentage_Change": 8.3
+        },
+        "4-Room": {
+          "Transactions_Last_Quarter": 3000,
+          "Transactions_Current_Quarter": 3100,
+          "Percentage_Change": 3.3
+        },
+        "5-Room": {
+          "Transactions_Last_Quarter": 2500,
+          "Transactions_Current_Quarter": 2600,
+          "Percentage_Change": 4.0
+        }
+      }
+    }
+  }
+}

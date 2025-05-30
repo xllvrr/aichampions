@@ -1,0 +1,39 @@
+{
+  "Grade A": [
+    {
+      "name": "Alan",
+      "position": "Software Engineer"
+    },
+    {
+      "name": "Caroline",
+      "position": "Marketing Manager"
+    },
+    {
+      "name": "Emily",
+      "position": "Graphic Designer"
+    }
+  ],
+  "Grade B": [],
+  "Grade C": [
+    {
+      "name": "Bernard",
+      "position": "HR Officer"
+    },
+    {
+      "name": "Frank",
+      "position": "Accountant"
+    },
+    {
+      "name": "Grace",
+      "position": "Project Manager"
+    },
+    {
+      "name": "Isabella",
+      "position": "Operations Manager"
+    },
+    {
+      "name": "Jack",
+      "position": "IT Support Specialist"
+    }
+  ]
+}
