@@ -1,0 +1,7 @@
+/home/xllvr/PythonProjs/AI_NCSS/.devenv/flake.json
+/home/xllvr/PythonProjs/AI_NCSS/.devenv.flake.nix
+/home/xllvr/PythonProjs/AI_NCSS/.env
+/home/xllvr/PythonProjs/AI_NCSS/devenv.local.nix
+/home/xllvr/PythonProjs/AI_NCSS/devenv.lock
+/home/xllvr/PythonProjs/AI_NCSS/devenv.nix
+/home/xllvr/PythonProjs/AI_NCSS/devenv.yaml

@@ -1,0 +1,175 @@
+
+
+<h1>Title: Improving Post-Retrieval Processes</h1>
+
+
+<br>
+
+# 1 Overview
+
+![](../_resources/Topic%205%20-%20Advanced%20RAG/img-20240427234647805.png)
+- Once we efficiently retrieved context for given query, we can further refine and optimize It to improve its relevancy for more optimal generation of output answer.
+
+---
+---
+<br>
+
+# 2 Re-Ranking of Retrieved chunks/context 
+
+- ✦ Re-ranking is a process of ordering retrieved context chunks in final prompt based on its score and relevancy. 
+- ✦ This is important as **researchers found better performance when most relevant context is positioned at start**.
+
+- ✦ **The technique consists of two very different steps:
+	- **Step 1**: 
+		- Get a good amount of relevant docs based on the input/question. Normally we set the most relevant K.
+		- For the first step, it is nothing more than what we usually use to make a basic RAG. 
+		- Vectorize our documents. vectorize the query and calculate the similarity with any metric of our choice.
+	- **Step 2**: 
+		- Recalculate which of these documents are really relevant. 
+		- Discarding the other documents that are not really useful.
+		- Re-order the relevant documents
+		- The second step is something different from what we are used to seeing. This recalculation/reranking is executed by the **reranking model** or **cross-encoder.
+
+![](../_resources/Topic%205%20-%20Advanced%20RAG/img-20240427175135553.png)
+
+- ✦ You will have realized that the two methods in the end provide the same result, a metric that reflects the similarity between two texts. But there is a very important difference
+
+> [!info] The result returned by the **cross encoder** is much **more reliable** than with the Bi-encoder
+> 
+
+- ✦ You may ask. If it works better, then, why don’t we use cross encoder directly with all chunks, instead of just the top-K chunks?
+	- Because it would be **terribly expensive and causing heavy computation (i.e., slow)**. 
+	- For this reason, we make a **first filter of the chunks closest in similarity to the query,** **reducing the use of the reranking model to only K times.
+
+> [!question] Why is it expensive and slow
+> We can notice that each **new query, the similarity of the query with each of the documents should be calculated**. 
+
+- ✦ To better understand the architecture of this method, let’s look at a visual example.
+![](../_resources/Topic%205%20-%20Advanced%20RAG/img-20240427175210317.png)
+The image shows the steps:
+1. We obtain the query, which we encode in its vector form with a transformer and we introduce it into the vector base.
+2. Collect the documents **most similar to the query from our database**. We can use any retriever method (e.g., cosine similarity).
+3. Next we use the cross-encoder model. 
+	- In the example in the image, this model will be used a total of 4 times. 
+	- Remember that the **input of this model will be the query and a document/chunk, to collect the similarity of these two texts.**
+4. The 4 calls have been made to this model in the previous step and 4 new values (between 0 and 1) of the similarity between the query and each of the documents have been obtained. 
+	- As can be seen, the chunk number 1 obtained in the previous steps, after the reranking, is now in 4th place.
+5. We add the first 3 chunks most relevant to the context.
+
+---
+
+- ✦ Now, a good question would be **where to find the Cross-Encoder models or how to use**? 
+	- One of the most straightforward way to use a powerful cross encoder model is to use the model made available by the company [Cohere](https://cohere.com/).
+	- While there are open-source models can be used for this purpose, it is beyond the scope of this training. 
+	- Due to the **LangChain** and its integration with **Cohere**, we only have to import the module that will execute the call to the Cohere cross-encoder model:
+
+```Python
+from langchain_cohere import CohereRerank  
+from langchain.retrievers.contextual_compression import ContextualCompressionRetriever
+
+os.environ["COHERE_API_KEY"] = "YOUR API KEY FROM COHERE"  
+  
+compressor = CohereRerank(top_n=3)
+
+  
+compression_retriever = ContextualCompressionRetriever(  
+base_compressor=compressor,  
+base_retriever=naive_retriever  
+)
+```
+
+Let’s see a comparison between a **Naive Retriever** (e.g., distance between embeddings) and **a Reranking Retriever**
+
+![](../_resources/Topic%205%20-%20Advanced%20RAG/img-20240427175337838.png)
+- ✦ **Observations:**
+	- As we see from the result above, **Naive Retriever** returns us the top 10 chunks/documents. 
+	- After performing the reranking and obtaining the 3 most relevant documents/chunks, there are noticeable changes. 
+	- Notice how document **number 16**, which is in **third position** in relation to its relevance in the first retriever, **becomes first position** when performing the reranking.
+---
+---
+<br>
+
+# 3 Context Compression (Compressing the Retrieved Documents)
+
+- ✦ This method focus on improving the quality of retrieved docs.  
+	- Information most relevant to a query may be buried in a document with a lot of irrelevant text.  
+	- Passing that full document through your application can lead to more expensive LLM calls and poorer responses.  
+- ✦ **Contextual compression** is meant to fix this.
+	- The idea is simple: instead of immediately returning retrieved documents as-is, you can compress them using the context of the given query, so that only the relevant information is returned. “**Compressing**” here refers to both compressing the contents of an individual document and filtering out documents wholesale.
+	- For this, we can use `ContextualCompressionRetriever` from `LangChain` library to improve the quality of retrieved documents by compressing them.
+
+```Python
+from langchain.retrievers import ContextualCompressionRetriever
+from langchain.retrievers.document_compressors import LLMChainExtractor
+from langchain_openai import OpenAI
+
+llm = OpenAI(temperature=0)
+compressor = LLMChainExtractor.from_llm(llm)
+compression_retriever = ContextualCompressionRetriever(
+    base_compressor=compressor, base_retriever=retriever
+)
+
+compressed_docs = compression_retriever.invoke(
+    "Why do LLMs hallucinate?"
+)
+pretty_print_docs(compressed_docs)
+```
+
+LangChain Documentation: [Contextual compression | 🦜️🔗 LangChain](https://python.langchain.com/v0.1/docs/modules/data_connection/retrievers/contextual_compression/)
+
+
+---
+---
+<br>
+
+# 4 Prompt (& Context) Compression 
+
+- ✦ **Prompt Compression** is a method of compressing or shrinking BOTH the retrieved context or final prompt by **removing irrelevant information**.
+	- It's aim is to reduce length of input prompt to reduce cost, improve latency and efficiency of output generation by allowing LLM to focus on more concise context.
+	- The core idea is to **use LLM to generate compressed version of input prompt.**
+	
+
+![](../_resources/Topic%205%20-%20Advanced%20RAG/img-20240427180047726.png)
+- ✦ Based on information on the [repository](https://github.com/microsoft/LLMLingua), it was claimed that these tools offer an efficient solution to compress prompts by up to **20x**, enhancing the utility of LLMs.
+	- 💰 **Cost Savings**: Reduces both prompt and generation lengths with minimal overhead.
+	- 📝 **Extended Context Support**: Enhances support for longer contexts, mitigates the "lost in the middle" issue, and boosts overall performance.
+	- ⚖️ **Robustness**: No additional training needed for LLMs.
+	- 🕵️ **Knowledge Retention**: Maintains original prompt information like ICL and reasoning.
+	- 📜 **KV-Cache Compression**: Accelerates inference process.
+	- 🪃 **Comprehensive Recovery**: GPT-4 can recover all key information from compressed prompts.
+---
+<br>
+- ✦ Based on information on the [repository](https://github.com/microsoft/LLMLingua), it was claimed that these tools offer an efficient solution to compress prompts by up to **20x**, enhancing the utility of LLMs.
+![](../_resources/Topic%205%20-%20Advanced%20RAG/img-20240428001057337.png)
+
+- ✦ Here is a snippet of code to show how to use the package.
+```Python
+# Install the package
+!pip install llmlingua
+
+from llmlingua import PromptCompressor
+
+llm_lingua = PromptCompressor()
+compressed_prompt = llm_lingua.compress_prompt(prompt, instruction="", question="", target_token=200)
+```
+
+---
+---
+<br>
+
+
+> [!warning] 
+> This note is not intended to exhaustively cover all techniques or methods available for improving Retrieval-Augmented Generation (RAG) processes. 
+> - RAG is a field under active research and progresses rapidly. 
+> - Readers are encouraged to stay informed about other techniques and methods in the field to gain a comprehensive understanding of the advancements and innovations that continue to emerge.
+
+
+---
+---
+<br>
+
+# 5 Reference & Further Readings
+
+
+- [Advanced RAG 09: Prompt Compression | by Florian June | Apr, 2024 | AI Advances (medium.com)](https://medium.com/ai-advances/advanced-rag-09-prompt-compression-95a589f7b554)
+

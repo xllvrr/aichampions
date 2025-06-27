@@ -1,0 +1,349 @@
+
+<h1>Title: Improving Retrieval Processes</h1>
+
+
+
+```toc
+```
+
+
+---
+---
+<br>
+
+# 1 Overview
+
+![](../_resources/Topic%205%20-%20Advanced%20RAG/img-20240427225235075.png)
+
+- ✦ The “_Retrieve_” step is key since it directly improves the context that the LLM has when generating a response.
+	- It is the process where we are retrieving relevant context for given query from vector store or other database.
+	- Instead of using normal document chunk index retrieval we can use some modified methods which can be more efficient and gives more contextual retrieval.
+
+
+- ✦ The methods we will cover below are:**
+	- **Parent Document Retriever**
+	- **Self-Query Retriever**
+	- **Contextual Compression Retriever (Reranking)**
+---
+---
+<br>
+
+# 2 Parent - Child Index Retrieval
+- ✦ Consider that we've developed a RAG system designed to identify potential diseases based on the symptoms entered during a consultation. If we're working with a Naive RAG, it's possible that it might only identify diseases sharing one or two symptoms, which could somewhat show that our application is not useful or even unusable 
+
+- ✦ This scenario is perfectly suited for employing the **Parent Doc Retriever method**. 
+	- This approach involves dividing large segments (referred to as the parent chunk) into smaller segments (known as the child chunk). 
+	- The advantage of creating smaller segments is that the information within them becomes more concentrated, ensuring that its value is not lost across extensive text passages.
+
+- ✦ However, there's a minor issue with this approach:
+	- To accurately locate the most pertinent documents, it's necessary to segment our documents into smaller pieces.
+	- Conversely, it's crucial to supply the Large Language Model (LLM) with adequate context, which is best achieved by using larger segments.
+
+The above points are illustrated in the subsequent image:
+![](../_resources/Topic%205%20-%20Advanced%20RAG/img-20240427225235113.png)
+
+- ✦ The dilemma seems inescapable: 
+	- Embedding a shorter context allows the RAG to focus on more specific meaning but forgoes the broader context in the surrounding text. Embedding longer text, such as the entire body of text focuses on the overall meaning but may dilute the significance of individual sentences or phrases.
+
+- ✦ This is where the **Parent-child index retrieval method** comes into play, promising to improve our approach.
+	- The core concept involves subdividing the larger segments (Parent chunks/documents) into smaller ones (Child Chunks/documents). 
+	- After this subdivision, the process entails searching for the most relevant top K documents using the child chunks, then retrieving the parent chunks associated with these top K child documents.
+
+- ✦ To bring this concept into practical application, a step-by-step explanation is most effective:
+	1. Collect the documents and segment them into larger chunks (Parent chunks).
+	2. Divide each parent chunk to generate smaller, child chunks.
+	3. Store the child chunks (in their Vector Representation) within the Vector Store.
+	4. Keep the parent chunks stored in memory (Vector representation for these is not necessary).
+
+The process described is visually represented in the following image:
+
+![](../_resources/Topic%205%20-%20Advanced%20RAG/img-20240427225235423.png)
+
+- ✦ To better understand this method, consider the following image that illustrates how it operates:
+![](../_resources/Topic%205%20-%20Advanced%20RAG/img-20240427225235476.png)
+
+- ✦ Implementing this might sound daunting due to the need to establish a new database for the smaller chunks, maintain the parent chunks in memory, and track the relationship between parent and child chunks. Fortunately, `LangChain` simplifies this process significantly, making it straightforward to set up.
+
+```Python
+from langchain.retrievers import ParentDocumentRetriever  
+from langchain.storage import InMemoryStore  
+from langchain_text_splitters import RecursiveCharacterTextSplitter  
+from langchain_openai import OpenAIEmbeddings  
+from langchain_chroma import Chroma
+  
+ 
+# Some code for loading the documents are obmitted
+# ...
+
+parent_docs = documents  
+  
+# Embedding Model  
+embeddings = OpenAIEmbeddings(model="text-embedding-3-small")  
+  
+  
+# Splitters  
+child_splitter = RecursiveCharacterTextSplitter(chunk_size=200)  
+parent_splitter = RecursiveCharacterTextSplitter(chunk_size=800)  
+  
+# Stores  
+store = InMemoryStore()  
+vectorstore = Chroma(embedding_function=embeddings, collection_name="fullDoc", persist_directory="./JohnWick_db_parentsRD")  
+  
+  
+parent_document_retriever = ParentDocumentRetriever(  
+	vectorstore=vectorstore,  
+	docstore=store,  
+	child_splitter=child_splitter,  
+	parent_splitter =parent_splitter  
+)
+
+```
+
+- ✦ Do note that the **number of chunks in the vector store (number of child chunks) should be much higher than the number of documents stored in memory (parent chunks)**. With the following code we can check it:
+
+```Python
+
+print(f"Number of parent chunks is: {len(list(store.yield_keys()))}")  
+  
+print(f"Number of child chunks is: {len(parent_document_retriever.vectorstore.get()['ids'])}")  
+  
+'''  
+Number of parent chunks is: 75  
+Number of child chunks is: 3701  
+'''
+```
+
+Once we have our **Parent Document Retriever**, we just need to create our RAG based on this retriever and that would be it.
+
+```Python
+setup_and_retrieval = RunnableParallel({"question": RunnablePassthrough(), "context": parent_document_retriever })  
+
+output_parser = StrOutputParser()  
+  
+  
+parent_retrieval_chain = setup_and_retrieval | rag_prompt | chat_model | output_parser
+```
+
+`LangChain` Documentation: [Parent Document Retriever | 🦜️🔗 LangChain](https://python.langchain.com/v0.2/docs/how_to/parent_document_retriever/#retrieving-larger-chunks)
+
+---
+---
+<br>
+
+# 3 Hierarchical Summary Index Retrieval
+
+![](../_resources/Topic%205%20-%20Advanced%20RAG/img-20240427225235604.png)
+
+- ✦ This approach can be understood as the reversal of Parent-Child Index Retrieval that we just discussed above. It is also a more intelligent method as it takes into consideration the "semantic meaning of the child chunks" and groups semantically-similar child chunks together. 
+
+- ✦ RAPTOR is one of the hierarchical approach introduced by **Stanford researchers**.
+	- **RAPTOR** introduces a novel approach to retrieval-augmented language models by constructing a recursive tree structure from documents
+	- This allows for more efficient and context-aware information retrieval across large texts, addressing common limitations in traditional language models
+
+- ✦ Based on user query, the summary document is retrieved and then relevant chunks are retrieved from that document.
+```Python
+# Intallation
+!git clone https://github.com/parthsarthi03/raptor.git
+!cd raptor
+!pip install -r requirements.txt
+
+# Setting Up
+import os
+os.environ["OPENAI_API_KEY"] = "your-openai-api-key"
+
+
+from raptor import RetrievalAugmentation
+
+RA = RetrievalAugmentation()
+
+# Adding Documents
+with open('sample.txt', 'r') as file:
+    text = file.read()
+RA.add_documents(text)
+
+
+```
+
+- ✦ For detailed methodologies and implementations, refer to the original paper or the GitHub repo:
+	- [[2401.18059] RAPTOR: Recursive Abstractive Processing for Tree-Organized Retrieval (arxiv.org)](https://arxiv.org/abs/2401.18059)
+	- [parthsarthi03/raptor: The official implementation of RAPTOR: Recursive Abstractive Processing for Tree-Organized Retrieval (github.com)](https://github.com/parthsarthi03/raptor)
+
+
+---
+---
+<br>
+
+# 3 Self-Query Retriever
+
+- ✦ Its main feature is that it is capable of performing searches in the vector store, applying filters based on the metadata. This approach is allegedly one of the most optimal methods to improve the efficiency of the retriever.
+
+- ✦ We know that when we apply a “**Naive retrieval**”, we are calculating the similarity of all the chunks of the vector database with the query. 
+	- The more chunks the vector store has, the more similarity calculations will have to be done. 
+	- Now, imagine being able to do a prior **filter based on the metadata**, and after selecting the chunks that meet the conditions imposed in relation to the metadata, calculate similarities. 
+	- **This can drastically reduce computational and time cost.**
+
+- ✦ Let’s look at a use case to fully understand when to apply this type of retreival.
+	- Let’s imagine that we have stored in our vector database a large number of experiences and leisure offers. 
+		- The description of the experience is what we have encoded, using our embedding model. 
+		- Each offer has 3 key values or metadata: 
+			- Date
+			- price 
+			- place.
+	- Let’s imagine that a user is looking for an experience of this style: 
+		- An experience in nature, that is for the whole family and safe. 
+		- Furthermore, the price must be less than $50 and the place is California.
+	- Therefore, it does not make sense to calculate similarities with chunks/experiences that do not comply with the metadata filter (which is the requirements by the user).
+
+- ✦ This case is ideal for applying **_Self Query Retriever_**. 
+	- What this type of retriever allows us is to perform a first filter through the metadata
+	- Only then perform the similarity calculation between the chunks that meet the metadata requirements and the user input.
+
+This technique can be summarized in two very specific steps:
+- **Query Constructor**
+- **Query Translater**
+
+
+---
+## 3.1 **Query Constructor**
+
+- ✦ The objective of the step called “**_Query Constructor_**” is **to create the appropriate query and filters according to the user input.**
+- ✦ Who is in charge of applying the corresponding filters and how do you know what they are?For this we are going to use an LLM. 
+	- This LLM will have to be able to decide which filters to apply and when. 
+	- We will also have to explain beforehand what the metadata is and what each of them means. 
+	- In short, the prompt must contain 3 key points:
+		- **Context**: Personality, how you should act, output format, etc.
+		- **Metadata**: Information about available metadata.
+		- **Query**: The user’s query/input/question.
+
+- ✦ The output generated by the LLM cannot be directly entered into the database. 
+	- Therefore, the so-called “**_Query Translater_**” is needed.
+
+---
+## 3.2 **Query Translater**
+
+- ✦ This is a module in charge of **translating the output of the LLM (Query Constructor) into the appropriate format to perform the query.** 
+	- Depending on the vector database you use, you will have to use one or the other. 
+	- As usual, we will use **Chroma db**, therefore, we need a translator focused on this database. `LangChain` has specific database translators for almost all of the databases.
+
+![](../_resources/Topic%205%20-%20Advanced%20RAG/img-20240427225235547.png)
+
+- ✦ Regarding the previous image, we see that everything begins with the user’s query. 
+	- We create the prompt that contains the 3 key fields and is introduced to the LLM that generates a response with two key fields: “**_Query_**” and “**_Filter_**”. 
+	- This is fed into the query translator which translates these two fields into the correct format needed by **_Chroma DB._** 
+	- Performs the query and returns the most relevant documents based on the user’s initial question.
+
+- ✦ It it is **very important to provide the LLM with a detailed description of the metadata available in the vector store.** This translates into the following piece of code:
+```Python
+from langchain_chroma import Chroma  
+from langchain_core.documents import Document  
+from langchain_openai import OpenAIEmbeddings  
+  
+docs = [  
+	Document(  
+		page_content="A bunch of scientists bring back dinosaurs and mayhem breaks loose",  
+		metadata={"year": 1993, "rating": 7.7, "genre": "science fiction"},  
+		),  
+	Document(  
+		page_content="Leo DiCaprio gets lost in a dream within a dream within a dream within a ...",  
+		metadata={"year": 2010, "director": "Christopher Nolan", "rating": 8.2},  
+	),  
+	Document(  
+		page_content="A psychologist / detective gets lost in a series of dreams within dreams within dreams and Inception reused the idea",  
+		metadata={"year": 2006, "director": "Satoshi Kon", "rating": 8.6},  
+	),  
+	Document(  
+		page_content="A bunch of normal-sized women are supremely wholesome and some men pine after them",  
+		metadata={"year": 2019, "director": "Greta Gerwig", "rating": 8.3},  
+	),  
+	Document(  
+		page_content="Toys come alive and have a blast doing so",  
+		metadata={"year": 1995, "genre": "animated"},  
+		),  
+	Document(  
+		page_content="Three men walk into the Zone, three men walk out of the Zone",  
+		metadata={  
+			"year": 1979,  
+			"director": "Andrei Tarkovsky",  
+			"genre": "thriller",  
+			"rating": 9.9,  
+			},  
+	),  
+]  
+vectorstore = Chroma.from_documents(docs, OpenAIEmbeddings())
+```
+
+- ✦ Now we can instantiate our retriever. 
+	- To do this we’ll need to provide some information upfront about the metadata fields that our documents support and a short description of the document contents.
+	- Besides, we need define our retriever to include the following information:
+		- The **LLM** to use
+		- The **embedding model** to be used
+		- The **vectorstore**  to be accessed
+		- A **description of the information in the documents** of this vector base.
+		- The **metadata description**
+		- The **Query translator you** want to use
+```Python
+from langchain.chains.query_constructor.base import AttributeInfo  
+from langchain.retrievers.self_query.base import SelfQueryRetriever  
+from langchain.retrievers.self_query.chroma import ChromaTranslator
+from langchain_openai import ChatOpenAI
+  
+metadata_field_info = [  
+	AttributeInfo(  
+		name="genre",  
+		description="The genre of the movie. One of ['science fiction', 'comedy', 'drama', 'thriller', 'romance', 'action', 'animated']",  
+		type="string",  
+	),  
+	AttributeInfo(  
+		name="year",  
+		description="The year the movie was released",  
+		type="integer",  
+	),  
+	AttributeInfo(  
+		name="director",  
+		description="The name of the movie director",  
+		type="string",  
+	),  
+	AttributeInfo(  
+		name="rating", description="A 1-10 rating for the movie", type="float"  
+	),  
+]  
+
+document_content_description = "Brief summary of a movie"  
+
+embeddings = OpenAIEmbeddings(model="text-embedding-3-small")  
+chat_model = ChatOpenAI()  
+  
+self_query_retriever = SelfQueryRetriever.from_llm(  
+	llm=ChatOpenAI(temperature=0),  
+	vectorstore =vectordb,  
+	document_contents = document_content_desription,  
+	metadata_field_info =metadata_field_info,  
+	verbose = True,  
+	structured_query_translator = ChromaTranslator()  
+	)
+```
+
+LangChain Documentation: [Self-querying | 🦜️🔗 LangChain](https://python.langchain.com/v0.2/docs/how_to/self_query/)
+
+---
+---
+<br>
+
+
+> [!warning] 
+> This note is not intended to exhaustively cover all techniques or methods available for improving Retrieval-Augmented Generation (RAG) processes. 
+> - RAG is a field under active research and progresses rapidly. 
+> - Readers are encouraged to stay informed about other techniques and methods in the field to gain a comprehensive understanding of the advancements and innovations that continue to emerge.
+
+
+# 5 Reference & Further Readings
+
+- [The Ultimate Guide on Retrieval Strategies - RAG (part-4) - ChatGen](https://chatgen.ai/blog/the-ultimate-guide-on-retrieval-strategies-rag-part-4/)
+
+- [Advanced RAG 01: Small-to-Big Retrieval](https://towardsdatascience.com/advanced-rag-01-small-to-big-retrieval-172181b396d4)
+
+- [Advanced RAG 06: Exploring Query Rewriting](https://medium.com/@florian_algo/advanced-rag-06-exploring-query-rewriting-23997297f2d1)
+
+- [Advanced RAG 04: Re-ranking. From Principles to Two Mainstream… | by Florian June | Towards AI](https://pub.towardsai.net/advanced-rag-04-re-ranking-85f6ae8170b1)
+
+- [langchain/cookbook/rewrite.ipynb at master · langchain-ai/langchain (github.com)](https://github.com/langchain-ai/langchain/blob/master/cookbook/rewrite.ipynb?ref=blog.langchain.dev)

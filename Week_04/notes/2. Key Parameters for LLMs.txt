@@ -1,0 +1,186 @@
+
+<h1>Title: Key Parameters for LLMs</h1>
+
+# Key Parameters for LLMs
+- ✦ For our `Helper Function` in the notebook, we only pass in three arguments to the `create()` method.
+```Python
+# This is a function that send input (i.e., prompt) to LLM and receive the output from the LLM
+def get_completion(prompt, model="gpt-4o-mini"):
+    messages = [{"role": "user", "content": prompt}]
+    response = client.chat.completions.create(
+        model=model,
+        messages=messages,
+        temperature=0, # this is the degree of randomness of the model's output
+    )
+```
+
+- ✦ The method can accept more parameters than we are using here.
+- ✦ There are three essential parameters here that can directly affect the behaviour of the LLMs. They are:
+	  **- Temperature**
+	  **- Top-P**
+	  **- Top-K (not available on OpenAI models)**
+- ✦ These parameters are common for other LLMs, including **Open-Source Models**
+
+> [!info] For more details on `client.chat.completion.create()` method,
+> visit the [offcial API reference here](https://platform.openai.com/docs/api-reference/chat/create)
+
+---
+<br>
+
+## Temperature
+![](https://images.unsplash.com/photo-1602096675810-9dce30949e80?q=80&w=2041&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D)
+
+- ✦ In the context of Large Language Models (LLMs) like GPT3.5 or GPT-4o, “temperature” refers to a parameter that **controls the randomness of the model’s predictions.** 
+	- When you set a high temperature, the model is more likely to produce varied and sometimes unexpected responses. 
+	- Conversely, a low temperature results in more predictable and conservative outputs. It’s akin to setting how “creative” or “safe” you want the model’s responses to be. 
+
+
+- **✦ Technically, it adjusts the probability distribution of the next token** being generated, influencing the diversity of the generated text
+	- `Softmax function` is often used in machine learning models to convert raw scores (also known as logits) into probabilities.
+	- In the context of language models, the softmax function is used to convert the scores assigned to each possible next word into probabilities. The word with the highest probability is often chosen as the prediction.
+		- So, if the softmax value for a word is high, it means that the model predicts that word to be the next word with high probability. 
+		- Conversely, a low softmax value for a word means that the word is unlikely to be the next word according to the model’s prediction.
+
+
+- ✦ Table below shows candidates of word for completing the prompt *"Singapore has a lot of beautiful ..."*.
+	- At a **lower temperature** makes the model’s **predictions more deterministic**, **favoring the most likely next token**. 
+		- The resulting probability distribution where one element has a probability close to 1, and all others have probabilities close to 0.
+			- The differences between logits are amplified, making the highest logit much more likely to be selected by the `softmax function`.
+		- In other words, the differences between logits are amplified, making the highest logit much more likely to be selected by the `softmax function`.
+	-  At **higher temperatures*, the new values (i.e., `Softmax with Temperature`) are less extreme**
+		 - The resulting probabilities are more evenly distributed. 
+		 - This leads to **more randomness and creativity in the generated text**, as the model is less likely to pick the most probable token and more likely to pick less probable ones.
+
+
+- ✦ See the following for the illustration of the concept.
+	- There are live examples that we will go through in our notebook
+	- by adjusting the `temperature`, we can control the trade-off between diversity and confidence in the model’s predictions. 
+	- A lower theta will make the model more confident but less diverse, while a higher theta will make the model more diverse but less confident.
+
+| Word      | Logits | Softmax | Softmax with LOW temperature | Softmax with High tempetaure |
+| --------- | ------ | ------- | ---------------------------- | :--------------------------- |
+| scenaries | 20     | 0.881   | 1.000                        | 0.8808                       |
+| buildings | 18     | 0.119   | 0.000                        | 0.1192                       |
+| people    | 5      | 0.000   | 0.000                        | 0.000                        |
+| gardens   | 2      | 0.000   | 0.000                        | 0.000                        |
+![](https://d17lzt44idt8rf.cloudfront.net/aicamp/resources/topic02/Pasted%20image%2020240328125030.png)
+
+> [!info] **[Extra]** The equations below shows how the "temperature" being incorporated into the Softmax function.
+> - 💡 You don't have to worry about understanding the equation or memorizing it. 
+> - It's more for us to understand the intuition on where is the `temperature` being used
+> 
+> - **Softmax**
+> $$ \text{Softmax}_\theta(z_i) = \frac{e^{z_i}}{\sum_{j=1}^{n} e^{z_i}}$$
+> - **Softmax with Temperature $\theta$**
+$$ \text{Softmax}_\theta(z_i) = \frac{e^{\frac{z_i}{\theta}}}{\sum_{j=1}^n e^{\frac{z_i}{\theta}}}$$
+> 
+
+> [!warning] Calculations that are found on this page are for understanding the intuition behind the key parameters and do not represent the exact ways model providers code their algorithms
+> - ✦ This applies to the calculations for temperature, top-K, and top-P
+> 
+
+> [!Try out in Notebook Week 02] 
+> The live calculation to show the intuition of the `Temperature`  is included in the Notebook of this week. Try it out!
+
+
+---
+---
+<br>
+
+# Top-K
+- ✦ After the probabilities are computed, the model applies the `Top-K sampling strategy`.
+- ✦ It selects the K most probable next words and re-normalizes the probabilities among these K words only.
+- ✦ Then it samples the next word from these K possibilities
+- ![](https://i.imgur.com/GYq0Cls.png)
+
+> [!Try out in Notebook Week 02] 
+> The live calculation to show the intuition of the `Top-K` process is included in the Notebook of this week. Try it out!
+
+
+---
+---
+<br>
+
+
+# Top-P
+- ✦ Top-P is also known as nucleus sampling
+	- This is an alternative to Top-K sampling, which we will discuss next.
+	- Instead of selecting the top K most probable words, it selects the smallest set of words whose cumulative probability exceeds a threshold P. Then it samples the next word from this set.
+	- Top-P sampling gives us a subset of words whose cumulative probability exceeds a certain threshold (P), making it a useful method for narrowing down a list of candidates based on their probabilities.
+	
+> [!tip] In practice, either `Top-K` or `Top-P` is used, but not both at the same time. They are different strategies for controlling the trade-off between diversity and confidence in the model’s predictions.
+> 
+
+![](https://d17lzt44idt8rf.cloudfront.net/aicamp/resources/top-p.png)
+
+---
+---
+<br>
+
+# Max Tokens
+- ✦ parameter: `max_tokens`
+- ✦ The maximum number of tokens that can be generated in the chat completion.
+- ✦The **total length of input tokens and generated tokens is limited by the model's context length**.
+---
+---
+<br>
+
+# N 
+- ✦ parameter: `n`
+- ✦ Defaults to 1 (if no value passed to the method)
+- ✦ This refer to **how many chat completion choices to generate for each input message**. 
+	- Note that you will be charged based on the number of generated tokens across all of the choices. 
+	- Stick with the default, which is to use 1 so as to minimize costs.
+
+
+---
+---
+<br>
+
+# Updated Helper Function
+- ✦ With the additional parameters that we have introduced in this note, we can update the `helper function` that we use to call LLMs, like the one below:
+
+```Python
+!pip install tiktoken
+!pip install openai
+
+# This is the "Updated" helper function for calling LLM,
+# to expose the parameters that we have discussed
+def get_completion(prompt, model="gpt-3.5-turbo", temperature=0, top_p=1.0, max_tokens=1024, n=1):
+    messages = [{"role": "user", "content": prompt}]
+    response = openai.chat.completions.create(
+        model=model,
+        messages=messages,
+        temperature=temperature,
+        top_p=top_p,
+        max_tokens=max_tokens,
+        n=1
+    )
+    return response.choices[0].message.content
+```
+
+---
+---
+<br>
+
+
+![](../_resources/Topic%202%20-%20Deeper%20Dive%20into%20LLMs/img-20240411171552638.png)
+
+# Extra: OpenAI Parameters
+On OpenAI's API reference, it is stated that **we generally recommend altering `temperature`  or `top_p` but not both.**
+
+![](../_resources/Topic%202%20-%20Deeper%20Dive%20into%20LLMs/img-20240411170749315.png)
+
+We suggest to stick with the official recommendation from OpenAI to only change the `temperature` as the primary way to change the "creativity" of the LLM output
+
+For those who want to explore or experiment further with both the parameters, this table contains various combinations of the two parameters and a description of the different scenarios they will be potentially useful for. We caveat that is not officially recommended by OpenAI and should be used with caution.
+
+| Use Case                 | Temperature | Top_p | Description                                                                                                                                                      |
+|--------------------------|-------------|-------|------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Code Generation          | 0.2         | 0.1   | Generates code that adheres to established patterns and conventions. Output is more deterministic and focused. Useful for generating syntactically correct code. |
+| Creative Writing         | 0.7         | 0.8   | Generates creative and diverse text for storytelling. Output is more exploratory and less constrained by patterns.                                               |
+| Chatbot Responses        | 0.5         | 0.5   | Generates conversational responses that balance coherence and diversity. Output is more natural and engaging.                                                    |
+| Code Comment Generation  | 0.3         | 0.2   | Generates code comments that are more likely to be concise and relevant. Output is more deterministic and adheres to conventions.                                |
+| Data Analysis Scripting  | 0.2         | 0.1   | Generates data analysis scripts that are more likely to be correct and efficient. Output is more deterministic and focused.                                      |
+| Exploratory Code Writing | 0.6         | 0.7   | Generates code that explores alternative solutions and creative approaches. Output is less constrained by established patterns.                                  |
+<div><caption><small><a href="[https://arxiv.org/abs/2307.06435](https://community.openai.com/t/cheat-sheet-mastering-temperature-and-top-p-in-chatgpt-api/172683)">source: OpenAI Community Forum - Temperature and top-p in ChatGPT.</a></small></caption></div>

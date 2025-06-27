@@ -1,0 +1,70 @@
+
+
+<h1>Title: LLMs and Hallucinations</h1>
+
+
+# LLMs & Hallucinations
+- ✦ One important thing to take note of when using such AI powered by Large Language Models (LLMs) is that they often generate text that appears coherent and contextually relevant but is factually incorrect or misleading. 
+	- We call these **hallucination problems**. This issue arises due to the inherent nature of how LLMs are trained and their reliance on massive datasets. 
+	- While some of the models like ChatGPT go through a second phase in the training where humans try to improve the responses, there is generally no fact-checking mechanism that is built into these LLMs when you use them.
+
+- ✦ There is no easy foolproof safeguard against hallucination, although some system prompt engineering can help mitigate this. 
+	- What makes hallucination by LLM worse is that the responses are surprisingly real, even if they are absolutely nonsensical. 
+	- Know that you must never take the responses as-is without fact-checking, and that you are ultimately responsible for the use of the output.
+
+---
+---
+<br>
+
+# Hallucinations &  Common Risks
+![](https://images.unsplash.com/photo-1624021097786-e621f5e3d52d?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D)
+
+- ✦ Understanding these pitfalls is crucial for effectively using LLMs and mitigating potential issues. We will explore some of the common pitfalls of LLMs, including issues with:
+	- citing source
+	- bias
+	- hallucinations
+	- math
+	- prompt hacking
+
+---
+
+## 🔖 Citing Non-existance Sources
+- ✦ Citing Sources While LLMs can generate text that appears to cite sources, **it's important to note that they cannot accurately cite sources.** 
+	- This is because they do not have access to the Internet and do not have the ability to remember where their training data came from. 
+	- As a result, **they often generate sources that seem plausible but are entirely fabricated**. 
+	- This is a significant limitation when using LLMs for tasks that require accurate source citation.
+	- Note The issue of inaccurate source citation can be mitigated to some extent by using search augmented LLMs (i.e., RAG that we will be covering). 
+		- These are LLMs that have the ability to search the Internet and other sources to provide more accurate information.
+
+---
+
+## 🧐 Bias
+- ✦ LLMs can exhibit biasness in their responses, often generating **stereotypical or prejudiced content**
+	- This is because they are trained on large datasets that may contain biased information. 
+	- Despite safeguards put in place to prevent this, LLMs can sometimes produce sexist, racist, or homophobic content. 
+	- This is a **critical issue to be aware** of when using LLMs in **consumer-facing applications** or in research, as it can l**ead to the propagation of harmful stereotypes and biased results.**
+
+---
+
+## 🥴 Hallucinations
+- ✦  LLMs can sometimes "hallucinate" or generate false information when asked a question they do not know the answer to. 
+	- Instead of stating that they do not know the answer, they often generate a response that sounds confident but is incorrect. 
+	- This can lead to the dissemination of misinformation and should be taken into account when using LLMs for tasks that require accurate information.
+
+---
+
+## 🔢 Math 
+- ✦ Despite their advanced capabilities, **Large Language Models (LLMs) often struggle with mathematical tasks and can provide incorrect answers (even as simple as multiplying two numbers).**
+	- This is because they are trained on large volumes of text and while they have gained a good understanding of natural language patterns, they are not explicitly trained to do maths.
+	- Note The issue with math can be somewhat alleviated by using a **tool augmented LLM**
+		- which combines the capabilities of an LLM with specialized tools for tasks like math or programming.
+		- We will cover this in later part of the training.
+
+---
+
+## 👺 Prompt Hacking
+- ✦ LLMs can be **manipulated or "hacked" by users** to generate specific content, and then use our LLM applications **for malicious or unintended usages**.
+	- This is known as prompt hacking and can be used to trick the LLM into generating inappropriate or harmful content. 
+	- It's important to be aware of this potential issue when using LLMs, especially in public-facing applications. 
+	- We will cover prompting techniques that can prevent some of of the prompt attacks/hacking techniques.
+

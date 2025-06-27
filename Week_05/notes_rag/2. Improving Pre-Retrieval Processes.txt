@@ -1,0 +1,226 @@
+
+<h1>Title: Improving Pre-Retrieval Processes</h1>
+
+
+---
+---
+<br>
+
+# 1 Overview
+
+- ✦ As name suggest this contains optimizations which are **done before retrieval process** to **enhance quality retrieval of context**.
+- ✦ It includes:
+	- Better Splitting & Chunking of Document, 
+	- query transformation*, 
+	- query routing*.
+	  
+<small style="color: grey">*While the diagram shows the query in "retrieval" phrase, we will be discussing the improving RAG with query in the <code>Pre-Retrieval Processes</code> because the "construction" or "enhancement" of the query are somethings that happen before the retrieval process.</small>
+
+---
+---
+<br>
+
+# 2 Better Splitting & Chunking of Document
+
+![](https://images.unsplash.com/photo-1457694587812-e8bf29a43845?q=80&w=2071&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D)
+
+- ✦ As we have already seen in Naive RAG that chunks are nothing but the small parts of whole document and indexing is vector representation of this chunks which we store in Vector DB.
+	- How we do splitting and chunking, and eventually embedding makes an impact on accurate retrieval which then improves generation quality and contextual confidence.
+	- A simplest way to for splitting and chunking is **fixed size chunking like simple character splitter or word splitter** but it is not much effective as it may not holds full context of specific subject which also known as **context fragmentation**.
+
+- ✦ We quote a paragraph from [GovTech RAG Playbook](https://playbooks.capdev.govtext.gov.sg/) that perfectly sums up the challenges of finding the right balance between the chunk size and the accuracy of the RAG pipeline. We included the *RAG Playbook* as the "Further Readings" for Topic 5. 
+> [!info] Chunk and Overlap Size
+> While it is possible to obtain an embedding for a document as long as it fits into the embedding model’s context length, embedding an entire document is not always an optimal strategy. It is common to segment documents into chunks and to specify an overlap size between chunks. 
+> 
+> Both of these parameters can help to facilitate the flow of context from one chunk to another, and the optimal chunk and overlap size to use is corpus specific. Embedding a single sentence focuses on its specific meaning but forgoes the broader context in the surrounding text. Embedding an entire body of text focuses on the overall meaning but may dilute the significance of individual sentences or phrases. 
+> 
+> Generally, longer and more complex queries benefit from smaller chunk sizes while shorter and simpler queries may not require chunking.
+> 
+> Source: *GovTech RAG Playbook*
+
+- ✦ While fixed-size chunking offers a straightforward approach, it often leads to context fragmentation, hindering the retrieval of accurate information. 
+	- To expand the number of options you can consider when building your RAG pipeline, this note introduce more sophisticated chunking techniques.
+---
+<br>
+
+## 2.1 Recursive Split For Specific File Types
+- ✦  Also known as **recursive structure aware chunking**, content based chunking which can keep the context and format of text or the specific file types, such as HTML, PDF, Markdown, JSON.
+
+- ✦ Simply put, using the right or suitable document splitter method for the use case will help us to derive at chunks that are tailored to the specific file formats that we are dealing with.
+	- For example, when we use 
+	- However, it's not a magical solution; simply applying the technique is not enough.
+	- It is still a good start with a suitable splitter method(s), rather than the overly simple splitter, like `CharacterTextSplitter`. 
+
+- ✦ `Langchain` supports many of the commonly used file types. Refer to the table below:
+	- The table below shows the different `text splitters` offered by Langchain. 
+		- **Name**: Name of the text splitter
+		- **Splits On**: How this text splitter splits text
+		- **Description**: Description of the splitter, including recommendation on when to use it.
+
+| Name          | Splits On                             | Description                                                                                                                                                                              |
+| ------------- | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Recursive** | A list of user defined characters     | Recursively splits text. Splitting text recursively serves the purpose of trying to keep related pieces of text next to each other. This is the recommended way to start splitting text. |
+| **HTML**      | HTML specific characters              | Splits text based on HTML-specific characters. Notably, this adds in relevant information about where that chunk came from (based on the HTML)                                           |
+| **Markdown**  | Markdown specific characters          | Splits text based on Markdown-specific characters. Notably, this adds in relevant information about where that chunk came from (based on the Markdown)                                   |
+| **Code**      | Code (Python, JS) specific characters | Splits text based on characters specific to coding languages. 15 different languages are available to choose from.                                                                       |
+|               |                                       |                                                                                                                                                                                          |
+<div style="text-align: center; width: 50%; margin: auto; background: #F5F5F5"><caption style="color: grey;"><small>For latest splitters (including experimental new features), please always refer to the official LangChain documentation page:
+<a href="https://python.langchain.com/v0.2/api_reference/text_splitters/index.html">Text Splitters</a></small></caption></div>
+
+
+> [!tip] Evaluate Text Splitters with the `Chunkviz` utility. 
+> - Chunkviz is a great tool for visualizing how your text splitter is working. 
+> - It will show us how our text is being split up and help in tuning up the splitting parameters.
+> - 👆🏻 Access the tool from [https://chunkviz.up.railway.app/)](https://chunkviz.up.railway.app/)
+> ![](../_resources/Topic%205%20-%20Advanced%20RAG/img-20240425232519197.png)
+
+---
+<br>
+
+## 2.2 Semantic Chunking
+- ✦ Semantic chunking is one the more sophisticated chunking methods.
+	- Semantic chunking relies heavily on embeddings, powerful tools for understanding text semantics. 
+	- Here’s **how semantic chunking works** in practice: 
+		- Text segments with similar meanings are grouped together. 
+		- Leveraging embeddings, we analyze and group consecutive sentences within a specified window size. 
+		- Beginning with the initial sentence, we compare its embedding to the subsequent sentences, iterating through the text until a significant deviation is detected, indicating a potential break point.
+		- Continuously computing embeddings within each sentence set allows for dynamic adjustments, refining the grouping process and enhancing our understanding of the text’s meaning.
+		- Through this method, we identify coherent groups of sentences that form meaningful sections, aiding in analysis and comprehension.
+
+- ✦ The easiest way to take advantage of this cutting-edge chunking approach is to use Langchain's experimental module:
+```Python
+!pip install --quiet langchain_experimental langchain_openai
+
+# Load Example Data
+# This is a long document we can split up.  
+with open("../../state_of_the_union.txt") as f:  
+state_of_the_union = f.read()
+
+# Create Text Splitter
+from langchain_experimental.text_splitter import SemanticChunker  
+from langchain_openai.embeddings import OpenAIEmbeddings
+
+# That's it. It is this simple.
+text_splitter = SemanticChunker(OpenAIEmbeddings())
+
+# Spit Text
+docs = text_splitter.create_documents([state_of_the_union])  
+print(docs[0].page_content)
+```
+<div style="text-align: center; width: 50%; margin: auto; background: #F5F5F5"><caption style="color: grey;"><small>This technique is tagged as an experimental feature in LangChain. As such, it may undergo significant changes or have compatibility issues. Please refer to the official LangChain documentation for the most up-to-date information::
+<a href="https://python.langchain.com/v0.1/docs/modules/data_connection/document_transformers/semantic-chunker/">Semantic-chunker documentation</a></small></caption></div>
+
+---
+---
+<br>
+
+# 3 Query Transformation
+
+![](https://images.unsplash.com/photo-1616593437252-0631aeb95590?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D)
+
+- ✦ Query transformation is a method of improving quality of user query by restructuring it to improve retrieval quality.
+
+- ✦ It includes techniques like:
+	- **Query rewriting**
+	- **Decomposing main query into multiple sub queries,** 
+
+
+---
+## 3.1 Query Rewriting
+- ✦ In real world, user query may not properly phrased or optimized to get quality retrieval. This will affect on end output.
+	- To overcome this issue, we can rewrite or rephrased the query which can optimally retrieve relevant context.
+	- To help us to better understand the intuition behind query rewriting, see the code example below. We may modify the code to suit our use case (it doesn't have to be web search engine).
+	- What we have do is to use the "improved" query, instead of the original query for the RAG.
+```Python
+
+# The main part is a rewriter to rewrite the query
+prompt = """Provide a better search query for \
+web search engine to answer the given question. 
+
+Question: {user_query}
+```
+- ✦ You can refer to the notebook here for the complete implementation of this technique [langchain/cookbook/rewrite.ipynb at master · langchain-ai/langchain (github.com)](https://github.com/langchain-ai/langchain/blob/master/cookbook/rewrite.ipynb?ref=blog.langchain.dev)
+
+---
+
+## 3.2 Multi Query Retrieval / Sub Query Decomposition
+- ✦ If query is complex and having multiple context then, retrieval with the single query may not be the good approach as it may fail to get proper output.
+	- In sub query decomposition, 
+		- first user query is decomposed into multiple sub queries using LLM,
+		- then retrieval using this sub queries is done in parallel and after that this retrieved contexts is combined together as single prompt for final answer generation.
+
+- ✦ In LangChain, we can use [MultiQueryRetriever](https://python.langchain.com/docs/modules/data_connection/retrievers/MultiQueryRetriever?ref=blog.langchain.dev) for implementation of this technique. The `MultiQueryRetriever` automates the process of prompt tuning by using an LLM to generate multiple queries from different perspectives for a given user input query. 
+	- For each query, it retrieves a set of relevant documents and takes the unique union across all queries to get a larger set of potentially relevant documents. 
+	- By generating multiple perspectives on the same question, the `MultiQueryRetriever` might be able to overcome some of the limitations of the distance-based retrieval and get a richer set of results.
+	- Below is a sample implementation using `MultiQueryRetriever`
+
+```Python
+from langchain_chroma import Chroma
+from langchain_community.document_loaders import WebBaseLoader
+from langchain_openai import OpenAIEmbeddings
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+# Load blog post
+loader = WebBaseLoader("https://lilianweng.github.io/posts/2023-06-23-agent/")
+data = loader.load()
+
+# Split
+text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=0)
+splits = text_splitter.split_documents(data)
+
+# VectorDB
+embedding = OpenAIEmbeddings()
+vectordb = Chroma.from_documents(documents=splits, embedding=embedding)
+
+# This is the Core Part of the Code
+from langchain.retrievers.multi_query import MultiQueryRetriever
+from langchain_openai import ChatOpenAI
+
+question = "What are the approaches to Task Decomposition?"
+llm = ChatOpenAI(temperature=0)
+retriever_from_llm = MultiQueryRetriever.from_llm(
+    retriever=vectordb.as_retriever(), llm=llm
+)
+```
+
+- ✦ To understand the intuition behind this method, we can think of it as when an original query is received, it is passed to an LLM to generate 5 different related queries. Then each of these query is used to retrieve the relevant documents. Here is the prompt being used by LangChain:
+```Python
+template="""You are an AI language model assistant. Your task is to generate five  
+different versions of the given user question to retrieve relevant documents from a vector  
+database. By generating multiple perspectives on the user question, your goal is to help  
+the user overcome some of the limitations of the distance-based similarity search.  
+Provide these alternative questions separated by newlines.  
+Original question: {question}"""
+```
+
+
+
+---
+---
+<br>
+
+# 4 [Extra] Query Routing
+
+![](https://images.unsplash.com/photo-1465447142348-e9952c393450?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D)
+- 
+	- When we are having multiple vector stores / databases or various actions to perform on user query based on its context, then routing the user query to right direction is very important for relevant retrieval and further generation.
+	
+	- Using specific prompt and output parser we can use LLM call to decide which action to perform or where to route the user query.
+		- In fact, we have implemented this when we identify the types of the customer query and then direct the query to the correct departments in our Topic 3 notebook [Notebook for Reference - Part 2](../Topic%203%20-%20Building%20System%20with%20Advanced%20Prompting%20and%20Chaining/Notebook%20for%20Reference%20-%20Part%202.md)
+	
+	- If you're keen to use any frameworks, you can use **prompt chaining** or custom **Agents** to implement query routing in [LangChain](https://python.langchain.com/docs/expression_language/how_to/routing) or [LlamaIndex](https://docs.llamaindex.ai/en/stable/module_guides/querying/router/).
+		- Don't worry if you don't understand what is "**Agents**" at this stage. We may come to that later in this training.
+
+---
+---
+<br>
+> [!warning] 
+> This note is not intended to exhaustively cover all techniques or methods available for improving Retrieval-Augmented Generation (RAG) processes. 
+> - RAG is a field under active research and progresses rapidly. 
+> - Readers are encouraged to stay informed about other techniques and methods in the field to gain a comprehensive understanding of the advancements and innovations that continue to emerge.
+
+
+# 5 References & Further Readings
+
+- [Advanced RAG: How MultiQuery Retriever Work? | by Bytefer | Apr, 2024 | Level Up Coding (medium.com)](https://medium.com/gitconnected/advanced-rag-how-multiquery-retriever-work-3eaebc2b1feb)
+- [Semantic Chunking for RAG. What is Chunking ? | by Plaban Nayak | The AI Forum | Apr, 2024 | Medium](https://medium.com/the-ai-forum/semantic-chunking-for-rag-f4733025d5f5)
