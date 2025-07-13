@@ -2,14 +2,13 @@
 name = "ai-learning-ncss"
 version = "0.1.0"
 description = "AI Learning Course under NCSS"
-requires-python = ">=3.9"
+requires-python = ">=3.10, <4.0"
 dependencies = [
     # Get Jupyter
     "jupyter",
     "jupyterlab-vim",
     "ipython",
     "nbqa[toolchain]",
-
     # Install packages for data analysis
     "numpy",
     "pandas",
@@ -17,7 +16,6 @@ dependencies = [
     "seaborn",
     "chromadb",
     "datasets",
-
     # Install packages for AI
     "graphviz",
     "tiktoken",
@@ -32,12 +30,12 @@ dependencies = [
     "unstructured",
     "pysbd",
     "ragas",
-    
+    "crewai>=0.1.32",
+    "crewai-tools>=0.0.1",
     # Install packages for file processing
     "pypdf",
     "pdfminer",
     "pdfminer.six",
-
-    # Install other utilities
-    "bs4" # web scraping
+    # Install other utilities # web scraping
+    "bs4",
 ]
