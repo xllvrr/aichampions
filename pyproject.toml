@@ -20,6 +20,7 @@ dependencies = [
     "graphviz",
     "tiktoken",
     "openai",
+    "lolviz>=1.4.4",
     "langchain",
     "langchain-openai",
     "langchain-experimental",
@@ -30,12 +31,14 @@ dependencies = [
     "unstructured",
     "pysbd",
     "ragas",
-    "crewai>=0.1.32",
-    "crewai-tools>=0.0.1",
+    "crewai[tools]>=0.1.32",
     # Install packages for file processing
     "pypdf",
     "pdfminer",
     "pdfminer.six",
-    # Install other utilities # web scraping
+    # Install other utilities
     "bs4",
+    "streamlit>=1.46.1",
+    "ipykernel>=6.29.5",
+    "dotenv>=0.9.9",
 ]
