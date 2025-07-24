@@ -1,7 +1,7 @@
 {
   inputs =
     let
-      version = "1.7.0";
+      version = "1.8.0";
 system = "x86_64-linux";
 devenv_root = "/home/xllvr/PythonProjs/AI_NCSS";
 devenv_dotfile = ./.devenv;
@@ -24,7 +24,7 @@ devenv_direnvrc_latest_version = 1;
 
       outputs = { nixpkgs, ... }@inputs:
         let
-          version = "1.7.0";
+          version = "1.8.0";
 system = "x86_64-linux";
 devenv_root = "/home/xllvr/PythonProjs/AI_NCSS";
 devenv_dotfile = ./.devenv;
